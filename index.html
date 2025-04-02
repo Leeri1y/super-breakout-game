@@ -486,3 +486,735 @@
             
             skillDisplay.textContent = displayText;
         }
+        
+// 更新连击系统
+function updateCombo() {
+const now = Date.now();
+if (now - lastHitTime < COMBO_THRESHOLD) {
+comboCount++;
+if (comboCount % 3 === 0) {
+// 每连击3次奖励
+const bonus = comboCount * 10;
+score += bonus;
+showSkillMessage(连击x${comboCount}! +${bonus}分);
+}
+} else {
+comboCount = 0;
+}
+lastHitTime = now;
+comboDisplay.textContent = comboCount > 0 ? 连击: x${comboCount} : '';
+}
+
+// 绘制砖块
+function drawBricks() {
+for (let c = 0; c < brickColumnCount; c++) {
+for (let r = 0; r < brickRowCount; r++) {
+const brick = bricks[c][r];
+if (brick.status === 1) {
+const brickX = c * (brickWidth + brickPadding) + brickOffsetLeft;
+const brickY = r * (brickHeight + brickPadding) + brickOffsetTop;
+brick.x = brickX;
+brick.y = brickY;
+            // 设置砖块颜色
+            if (brick.isUnbreakable) {
+                ctx.fillStyle = '#FF0000';
+            } else if (brick.special) {
+                ctx.fillStyle = SPECIAL_BRICKS[brick.special].color;
+            } else {
+                ctx.fillStyle = '#0095DD';
+            }
+            
+            ctx.fillRect(brickX, brickY, brickWidth, brickHeight);
+            ctx.strokeStyle = '#000';
+            ctx.strokeRect(brickX, brickY, brickWidth, brickHeight);
+            
+            // 如果是特殊砖块，绘制特殊标记
+            if (brick.special) {
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = '10px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('★', brickX + brickWidth/2, brickY + brickHeight/2 + 3);
+                ctx.textAlign = 'left';
+                }
+            }
+        }
+    }
+}
+
+// 绘制横板
+function drawPaddle() {
+ctx.fillStyle = laserActive ? '#FF00FF' : '#0095DD';
+ctx.fillRect(paddleX, canvas.height - paddleHeight, paddleWidth, paddleHeight);
+    // 如果激光能力激活，绘制激光发射器
+if (laserActive) {
+    ctx.fillStyle = '#FF0000';
+    ctx.beginPath();
+    ctx.arc(paddleX + 10, canvas.height - paddleHeight, 5, 0, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(paddleX + paddleWidth - 10, canvas.height - paddleHeight, 5, 0, Math.PI*2);
+    ctx.fill();
+}
+    }
+
+// 绘制球
+function drawBall() {
+balls.forEach(ball => {
+ctx.beginPath();
+ctx.arc(ball.x, ball.y, ballRadius, 0, Math.PI * 2);
+ctx.fillStyle = '#0095DD';
+ctx.fill();
+ctx.closePath();
+});
+}
+
+// 绘制Boss子弹
+function drawBossBullets() {
+bossBullets.forEach(bullet => {
+ctx.beginPath();
+ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
+ctx.fillStyle = '#FF0000';
+ctx.fill();
+ctx.closePath();
+});
+}
+
+// 绘制激光
+function drawLasers() {
+lasers.forEach(laser => {
+ctx.strokeStyle = '#FF0000';
+ctx.lineWidth = 2;
+ctx.beginPath();
+ctx.moveTo(laser.x, laser.y);
+ctx.lineTo(laser.x, laser.y - laser.length);
+ctx.stroke();
+});
+}
+
+// 绘制分数
+function drawScore() {
+ctx.font = '16px Arial';
+ctx.fillStyle = '#FFFFFF';
+ctx.fillText('分数: ' + score, 8, 20);
+}
+
+// 绘制关卡
+function drawLevel() {
+ctx.font = '16px Arial';
+ctx.fillStyle = '#FFFFFF';
+ctx.fillText('关卡: ' + level, canvas.width - 80, 20);
+}
+
+// 更新生命显示
+function updateLivesDisplay() {
+livesDisplay.textContent = '生命: ' + lives;
+}
+
+// 计算不可破坏砖块数量
+function countUnbreakableBricks() {
+let count = 0;
+for (let c = 0; c < brickColumnCount; c++) {
+for (let r = 0; r < brickRowCount; r++) {
+if (bricks[c][r].isUnbreakable && bricks[c][r].status === 1) {
+count++;
+}
+}
+}
+return count;
+}
+
+// 重置球和横板位置
+function resetBallAndPaddle() {
+paddleX = (canvas.width - paddleWidth) / 2;
+balls = [{
+x: canvas.width / 2,
+y: canvas.height - 30,
+dx: dailyChallengeModifiers.fastBall ? 5 : 3,
+dy: dailyChallengeModifiers.fastBall ? -5 : -3
+}];
+}
+
+// 激活特殊效果
+function activateSpecialEffect(specialType) {
+switch(specialType) {
+case 'MULTI_BALL':
+createNewBall();
+createNewBall();
+showSkillMessage(SPECIAL_BRICKS.MULTI_BALL.effect);
+break;
+case 'EXPAND_PADDLE':
+paddleWidth = 150;
+expandedPaddle = true;
+expandedPaddleEndTime = Date.now() + 10000; // 10秒效果
+showSkillMessage(SPECIAL_BRICKS.EXPAND_PADDLE.effect);
+break;
+case 'LASER':
+laserActive = true;
+showSkillMessage(SPECIAL_BRICKS.LASER.effect);
+// 5秒后失效
+setTimeout(() => {
+laserActive = false;
+showSkillMessage("激光能力已失效");
+}, 5000);
+break;
+case 'SLOW_MO':
+gameSpeed = 0.5;
+showSkillMessage(SPECIAL_BRICKS.SLOW_MO.effect);
+// 5秒后恢复
+setTimeout(() => {
+gameSpeed = 1;
+showSkillMessage("球速恢复正常");
+}, 5000);
+break;
+}
+}
+
+// 发射激光
+function fireLasers() {
+if (!laserActive) return;
+lasers = [
+    { x: paddleX + 10, y: canvas.height - paddleHeight, length: canvas.height },
+    { x: paddleX + paddleWidth - 10, y: canvas.height - paddleHeight, length: canvas.height }
+];
+
+// 检测激光是否击中砖块
+lasers.forEach(laser => {
+    for (let c = 0; c < brickColumnCount; c++) {
+        for (let r = 0; r < brickRowCount; r++) {
+            const brick = bricks[c][r];
+            if (brick.status === 1 && !brick.isUnbreakable) {
+                if (laser.x >= brick.x && laser.x <= brick.x + brickWidth) {
+                    if (brick.y + brickHeight >= canvas.height - paddleHeight - laser.length) {
+                        brick.status = 0;
+                        score += dailyChallenge ? Math.floor(20 * dailyChallengeModifiers.bonusMultiplier) : 20;
+                        updateCombo();
+                    }
+                }
+            }
+        }
+    }
+});
+
+// 激光只显示一帧
+setTimeout(() => lasers = [], 16);
+    lasers = [
+    { x: paddleX + 10, y: canvas.height - paddleHeight, length: canvas.height },
+    { x: paddleX + paddleWidth - 10, y: canvas.height - paddleHeight, length: canvas.height }
+];
+
+// 检测激光是否击中砖块
+lasers.forEach(laser => {
+    for (let c = 0; c < brickColumnCount; c++) {
+        for (let r = 0; r < brickRowCount; r++) {
+            const brick = bricks[c][r];
+            if (brick.status === 1 && !brick.isUnbreakable) {
+                if (laser.x >= brick.x && laser.x <= brick.x + brickWidth) {
+                    if (brick.y + brickHeight >= canvas.height - paddleHeight - laser.length) {
+                        brick.status = 0;
+                        score += dailyChallenge ? Math.floor(20 * dailyChallengeModifiers.bonusMultiplier) : 20;
+                        updateCombo();
+                    }
+                }
+            }
+        }
+    }
+});
+
+// 激光只显示一帧
+setTimeout(() => lasers = [], 16);
+    // 每3关出现Boss战
+if (level % 3 === 0) {
+    boss = new Boss();
+    bossHealth.style.display = 'block';
+    updateBossHealth();
+} else {
+    // 增加难度
+    balls.forEach(ball => {
+        ball.dx += ball.dx > 0 ? 0.5 : -0.5;
+        ball.dy = -Math.abs(ball.dy) - 0.5;
+    });
+}
+
+initBricks();
+resetBallAndPaddle();
+    }
+
+// 游戏结束
+function gameOver(win) {
+gameRunning = false;
+saveHighScore(score);
+if (win) {
+    alert(`恭喜你赢了！最终分数: ${score}`);
+} else {
+    alert(`游戏结束！最终分数: ${score}`);
+}
+
+resetGame();
+showMenu();
+    if (win) {
+    alert(`恭喜你赢了！最终分数: ${score}`);
+} else {
+    alert(`游戏结束！最终分数: ${score}`);
+}
+
+resetGame();
+showMenu();
+    if (highscores.length === 0) {
+    highscoresList.innerHTML = '<p>暂无高分记录</p>';
+    return;
+}
+
+highscores.sort((a, b) => b.score - a.score).slice(0, 5).forEach((scoreItem, index) => {
+    const div = document.createElement('div');
+    div.className = 'highscore-item';
+    div.textContent = `${index + 1}. ${scoreItem.score} 分 (${new Date(scoreItem.date).toLocaleDateString()})`;
+    highscoresList.appendChild(div);
+});
+    if (highscores.length === 0) {
+    highscoresList.innerHTML = '<p>暂无高分记录</p>';
+    return;
+}
+
+highscores.sort((a, b) => b.score - a.score).slice(0, 5).forEach((scoreItem, index) => {
+    const div = document.createElement('div');
+    div.className = 'highscore-item';
+    div.textContent = `${index + 1}. ${scoreItem.score} 分 (${new Date(scoreItem.date).toLocaleDateString()})`;
+    highscoresList.appendChild(div);
+});
+// 应用挑战模式修饰器
+if (dailyChallengeModifiers.smallPaddle) {
+    paddleWidth = 75;
+}
+if (dailyChallengeModifiers.fastBall) {
+    balls.forEach(ball => {
+        ball.dx *= 1.5;
+        ball.dy *= 1.5;
+    });
+}
+
+gameMenu.style.display = 'none';
+gameRunning = true;
+resetGame();
+draw();
+
+// 显示挑战信息
+showSkillMessage(`每日挑战: ${dailyChallengeModifiers.smallPaddle ? '小横板 ' : ''}${dailyChallengeModifiers.fastBall ? '快速球 ' : ''}x${dailyChallengeModifiers.bonusMultiplier.toFixed(1)}分数`);
+    }
+
+// 主绘制函数
+function draw() {
+if (!gameRunning) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+drawBricks();
+drawBall();
+drawPaddle();
+drawScore();
+drawLevel();
+
+// 更新技能冷却显示
+updateSkillDisplay();
+
+// 检查扩展横板时间是否结束
+if (expandedPaddle && Date.now() > expandedPaddleEndTime) {
+    paddleWidth = dailyChallengeModifiers.smallPaddle ? 75 : 100;
+    expandedPaddle = false;
+    showSkillMessage("横板恢复正常大小");
+}
+
+// 如果有Boss，绘制并更新Boss
+if (boss) {
+    boss.update();
+    boss.draw();
+    
+    // 更新Boss子弹
+    bossBullets.forEach((bullet, index) => {
+        bullet.y += bullet.speed;
+        
+        // 检测子弹是否击中横板
+        if (bullet.y + bullet.radius > canvas.height - paddleHeight && 
+            bullet.y - bullet.radius < canvas.height &&
+            bullet.x > paddleX && 
+            bullet.x < paddleX + paddleWidth) {
+            lives--;
+            updateLivesDisplay();
+            bossBullets.splice(index, 1);
+            
+            if (lives <= 0) {
+                gameOver(false);
+                return;
+            }
+        }
+        
+        // 移除超出屏幕的子弹
+        if (bullet.y > canvas.height) {
+            bossBullets.splice(index, 1);
+        }
+    });
+    
+    drawBossBullets();
+}
+
+// 碰撞检测
+balls.forEach((ball, ballIndex) => {
+    // 边界检测
+    if (ball.x + ball.dx > canvas.width - ballRadius || ball.x + ball.dx < ballRadius) {
+        ball.dx = -ball.dx;
+    }
+    if (ball.y + ball.dy < ballRadius) {
+        ball.dy = -ball.dy;
+    } else if (ball.y + ball.dy > canvas.height - ballRadius) {
+        // 检测是否碰到横板
+        if (ball.x > paddleX && ball.x < paddleX + paddleWidth) {
+            // 根据击打位置改变反弹角度
+            const hitPosition = (ball.x - paddleX) / paddleWidth;
+            ball.dx = 5 * (hitPosition - 0.5); // -2.5到2.5之间的值
+            ball.dy = -Math.abs(ball.dy); // 确保向上反弹
+        } else {
+            // 球掉落底部
+            balls.splice(ballIndex, 1);
+            
+            if (balls.length === 0) {
+                lives--;
+                updateLivesDisplay();
+                if (lives <= 0) {
+                    gameOver(false);
+                    return;
+                } else {
+                    resetBallAndPaddle();
+                }
+            }
+        }
+    }
+    
+    // 砖块碰撞检测
+    for (let c = 0; c < brickColumnCount; c++) {
+        for (let r = 0; r < brickRowCount; r++) {
+            const brick = bricks[c][r];
+            if (brick.status === 1) {
+                // 改进的碰撞检测
+                if (
+                    ball.x + ballRadius > brick.x &&
+                    ball.x - ballRadius < brick.x + brickWidth &&
+                    ball.y + ballRadius > brick.y &&
+                    ball.y - ballRadius < brick.y + brickHeight
+                ) {
+                    // 计算碰撞前球的位置
+                    const prevBallX = ball.x - ball.dx;
+                    const prevBallY = ball.y - ball.dy;
+                    
+                    // 确定从哪个方向碰撞
+                    let fromLeft = prevBallX + ballRadius <= brick.x;
+                    let fromRight = prevBallX - ballRadius >= brick.x + brickWidth;
+                    let fromTop = prevBallY + ballRadius <= brick.y;
+                    let fromBottom = prevBallY - ballRadius >= brick.y + brickHeight;
+                    
+                    // 修正同时从两个方向碰撞的情况
+                    if (!fromLeft && !fromRight && !fromTop && !fromBottom) {
+                        // 如果球完全在砖块内部（罕见情况），根据移动方向反弹
+                        if (Math.abs(ball.dx) > Math.abs(ball.dy)) {
+                            ball.dx = -ball.dx;
+                        } else {
+                            ball.dy = -ball.dy;
+                        }
+                    } else {
+                        // 根据主要碰撞方向反弹
+                        if (fromLeft || fromRight) {
+                            ball.dx = -ball.dx;
+                            // 调整位置防止卡住
+                            if (fromLeft) ball.x = brick.x - ballRadius - 1;
+                            else ball.x = brick.x + brickWidth + ballRadius + 1;
+                        }
+                        if (fromTop || fromBottom) {
+                            ball.dy = -ball.dy;
+                            // 调整位置防止卡住
+                            if (fromTop) ball.y = brick.y - ballRadius - 1;
+                            else ball.y = brick.y + brickHeight + ballRadius + 1;
+                        }
+                    }
+                    
+                    // 如果是Boss，造成伤害
+                    if (boss && brick.isUnbreakable) {
+                        boss.takeDamage();
+                        continue;
+                    }
+                    
+                    if (!brick.isUnbreakable) {
+                        brick.status = 0;
+                        const points = brick.special ? 50 : (dailyChallenge ? Math.floor(10 * dailyChallengeModifiers.bonusMultiplier) : 10);
+                        score += points;
+                        updateCombo();
+                        
+                        // 激活特殊效果
+                        if (brick.special) {
+                            activateSpecialEffect(brick.special);
+                        }
+                        
+                        // 检查是否完成当前关卡
+                        const breakableBricks = brickRowCount * brickColumnCount - countUnbreakableBricks();
+                        if (score >= breakableBricks) {
+                            nextLevel();
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // 更新球位置
+    ball.x += ball.dx * gameSpeed;
+    ball.y += ball.dy * gameSpeed;
+});
+
+// 移动横板
+if (rightPressed && paddleX < canvas.width - paddleWidth) {
+    paddleX += 7;
+} else if (leftPressed && paddleX > 0) {
+    paddleX -= 7;
+}
+
+// 发射激光
+if (laserActive) {
+    fireLasers();
+}
+
+// 绘制激光
+drawLasers();
+
+requestAnimationFrame(draw);
+    }
+
+// 事件监听
+document.addEventListener('keydown', (e) => {
+if (e.key === 'Right' || e.key === 'ArrowRight') {
+rightPressed = true;
+} else if (e.key === 'Left' || e.key === 'ArrowLeft') {
+leftPressed = true;
+}
+    // 事件监听（续）
+document.addEventListener('keyup', (e) => {
+    if (e.key === 'Right' || e.key === 'ArrowRight') {
+        rightPressed = false;
+    } else if (e.key === 'Left' || e.key === 'ArrowLeft') {
+        leftPressed = false;
+    }
+    
+    // 技能触发
+    for (const skillName in PLAYER_SKILLS) {
+        if (e.code === PLAYER_SKILLS[skillName].key) {
+            useSkill(skillName);
+        }
+    }
+});
+
+// 触摸控制（增强）
+let touchStartX = 0;
+canvas.addEventListener('touchstart', (e) => {
+    if (!gameRunning) return;
+    touchStartX = e.touches[0].clientX;
+    e.preventDefault();
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+    if (!gameRunning) return;
+    const touchX = e.touches[0].clientX - canvas.offsetLeft;
+    paddleX = touchX - paddleWidth / 2;
+    paddleX = Math.max(0, Math.min(canvas.width - paddleWidth, paddleX));
+    e.preventDefault();
+}, { passive: false });
+
+// 按钮事件绑定
+dailyChallengeButton.addEventListener('click', startDailyChallenge);
+highscoresButton.addEventListener('click', () => {
+    gameMenu.style.display = 'none';
+    highScores.style.display = 'flex';
+    loadHighScores();
+});
+backFromScoresButton.addEventListener('click', showMenu);
+
+// 增强的Boss战逻辑
+function updateBoss() {
+    if (!boss) return;
+    
+    // Boss移动模式增强
+    if (Math.random() < 0.01) {
+        boss.moveSpeed = 3 + Math.random() * 2;
+    }
+    
+    // Boss子弹增强
+    bossBullets.forEach((bullet, index) => {
+        bullet.y += bullet.speed;
+        
+        // 抛物线运动
+        bullet.x += Math.sin(Date.now()/200 + index) * 0.5;
+        
+        // 碰撞检测
+        if (bullet.y + bullet.radius > canvas.height - paddleHeight && 
+            bullet.x > paddleX && 
+            bullet.x < paddleX + paddleWidth) {
+            lives--;
+            updateLivesDisplay();
+            bossBullets.splice(index, 1);
+            showSkillMessage("被Boss子弹击中！");
+        }
+        
+        // 球与子弹碰撞
+        balls.forEach((ball, ballIndex) => {
+            const dx = ball.x - bullet.x;
+            const dy = ball.y - bullet.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < ballRadius + bullet.radius) {
+                bossBullets.splice(index, 1);
+                balls.splice(ballIndex, 1);
+                if (balls.length === 0) {
+                    resetBallAndPaddle();
+                }
+            }
+        });
+    });
+}
+
+// 增强的激光系统
+function enhancedFireLasers() {
+    if (!laserActive) return;
+    
+    // 连续激光持续时间
+    if (Date.now() % 100 < 30) {
+        lasers = [
+            { x: paddleX + 10, y: canvas.height - paddleHeight, length: canvas.height },
+            { x: paddleX + paddleWidth - 10, y: canvas.height - paddleHeight, length: canvas.height }
+        ];
+    }
+    
+    // 激光音效视觉反馈
+    ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+    lasers.forEach(laser => {
+        ctx.fillRect(laser.x - 2, 0, 4, canvas.height);
+    });
+}
+
+// 每日挑战特殊处理
+function handleDailyChallenge() {
+    if (!dailyChallenge) return;
+    
+    // 动态难度调整
+    if (score > 1000) {
+        balls.forEach(ball => {
+            ball.dx *= 1.1;
+            ball.dy *= 1.1;
+        });
+    }
+    
+    // 随机事件
+    if (Math.random() < 0.005) {
+        const randomEffect = Math.random();
+        if (randomEffect < 0.3) {
+            createNewBall();
+            showSkillMessage("挑战模式：随机获得额外球！");
+        } else if (randomEffect < 0.6) {
+            gameSpeed = 0.8;
+            setTimeout(() => gameSpeed = 1, 3000);
+            showSkillMessage("挑战模式：临时减速！");
+        }
+    }
+}
+
+// 增强的碰撞检测（性能优化版）
+function optimizedCollisionDetection() {
+    const ballCount = balls.length;
+    const now = Date.now();
+    
+    // 空间划分优化
+    const gridSize = 50;
+    const brickGrid = {};
+    
+    // 将砖块放入网格
+    for (let c = 0; c < brickColumnCount; c++) {
+        for (let r = 0; r < brickRowCount; r++) {
+            const brick = bricks[c][r];
+            if (brick.status === 1) {
+                const gridX = Math.floor(brick.x / gridSize);
+                const gridY = Math.floor(brick.y / gridSize);
+                const key = `${gridX},${gridY}`;
+                if (!brickGrid[key]) brickGrid[key] = [];
+                brickGrid[key].push(brick);
+            }
+        }
+    }
+    
+    // 检测每个球可能碰撞的网格
+    balls.forEach(ball => {
+        const ballGridX = Math.floor(ball.x / gridSize);
+        const ballGridY = Math.floor(ball.y / gridSize);
+        
+        for (let x = -1; x <= 1; x++) {
+            for (let y = -1; y <= 1; y++) {
+                const key = `${ballGridX + x},${ballGridY + y}`;
+                if (brickGrid[key]) {
+                    brickGrid[key].forEach(brick => {
+                        detectCollision(ball, brick);
+                    });
+                }
+            }
+        }
+    });
+}
+
+// 增强的物理引擎
+function applyAdvancedPhysics(ball) {
+    // 空气阻力模拟
+    ball.dx *= 0.999;
+    ball.dy *= 0.999;
+    
+    // 重力影响
+    if (level > 3) {
+        ball.dy += 0.02;
+    }
+    
+    // 速度限制
+    const maxSpeed = 8;
+    ball.dx = Math.max(-maxSpeed, Math.min(maxSpeed, ball.dx));
+    ball.dy = Math.max(-maxSpeed, Math.min(maxSpeed, ball.dy));
+}
+
+// 最终的游戏循环整合
+function gameLoop() {
+    if (!gameRunning) return;
+    
+    const start = Date.now();
+    
+    updateBoss();
+    handleDailyChallenge();
+    optimizedCollisionDetection();
+    balls.forEach(ball => applyAdvancedPhysics(ball));
+    
+    // 保证60fps运行
+    const renderTime = Date.now() - start;
+    const delay = Math.max(0, 16 - renderTime);
+    setTimeout(() => requestAnimationFrame(gameLoop), delay);
+}
+
+// 初始化游戏
+function init() {
+    // 确保移动端缩放正确
+    const viewportMeta = document.createElement('meta');
+    viewportMeta.name = 'viewport';
+    viewportMeta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+    document.head.appendChild(viewportMeta);
+    
+    // 加载历史高分
+    if (!localStorage.getItem('highscores')) {
+        localStorage.setItem('highscores', JSON.stringify([]));
+    }
+    
+    // 防止右键菜单
+    canvas.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+    });
+    
+    // 启动游戏循环
+    gameLoop();
+}
+
+// 启动初始化
+init();
