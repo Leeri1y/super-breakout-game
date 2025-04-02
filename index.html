@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>超级打砖块</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="livesDisplay"></div>
+        <div id="scoreDisplay"></div>
+        <div id="levelDisplay"></div>
+        <div id="comboDisplay"></div>
+        <canvas id="gameCanvas"></canvas>
+        
+        <div id="gameMenu" class="overlay">
+            <h1 class="menu-title">超级打砖块</h1>
+            <button id="startButton" class="menu-button">开始游戏</button>
+            <button id="instructionsButton" class="menu-button">游戏说明</button>
+            <button id="highscoresButton" class="menu-button">排行榜</button>
+        </div>
+        
+        <div id="gameInstructions" class="overlay">
+            <h1 class="menu-title">游戏说明</h1>
+            <div class="instructions-content">
+                <p>←→ 移动横板 | 空格键: 发射球</p>
+                <p>特殊砖块效果:</p>
+                <div class="powerup-example gold">多球</div>
+                <div class="powerup-example green">横板变宽</div>
+                <div class="powerup-example purple">激光</div>
+                <p>技能按键: S(减速) M(多球)</p>
+            </div>
+            <button id="backButton" class="menu-button">返回</button>
+        </div>
+        
+        <div id="highscoresScreen" class="overlay">
+            <h1 class="menu-title">排行榜</h1>
+            <div id="highscoresList"></div>
+            <button id="backFromHighscores" class="menu-button">返回</button>
+        </div>
+        
+        <div id="achievementPopup" class="achievement-popup">
+            <span class="achievement-icon">🏆</span>
+            <div class="achievement-text">
+                <div class="achievement-title"></div>
+                <div class="achievement-desc"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 音频元素 -->
+    <audio id="bgMusic" loop src="assets/audio/background.mp3"></audio>
+    <audio id="hitSound" src="assets/audio/hit.wav"></audio>
+    <audio id="breakSound" src="assets/audio/break.wav"></audio>
+    <audio id="powerupSound" src="assets/audio/powerup.wav"></audio>
+    <audio id="gameOverSound" src="assets/audio/gameover.wav"></audio>
+
+    <script src="js/game.js" type="module"></script>
+</body>
+</html>
