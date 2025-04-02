@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=360, height=600, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Block Breaking Game</title>
     <style>
         /* 原有样式保持不变 */
@@ -14,10 +14,22 @@
         .menu-button { padding: 12px 24px; margin: 10px; font-size: 1.2rem; background-color: #0095DD; color: white; border: none; border-radius: 5px; cursor: pointer; min-width: 150px; }
         .menu-button:hover { background-color: #0077BB; }
         #livesDisplay { position: absolute; top: 20px; left: 20px; font-size: 1.2rem; color: white; z-index: 5; }
+        #comboDisplay {
+            position: absolute;
+            top: 80px;
+            left: 20px;
+            color: #ffd700;
+            font-size: 1.2em;
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(255,215,0,0.5);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
     </style>
 </head>
 <body>
     <div id="livesDisplay"></div>
+    <div id="comboDisplay"></div>
     <canvas id="gameCanvas"></canvas>
     
     <div id="gameMenu">
@@ -85,6 +97,22 @@
         let balls = [];
         let lasers = [];
         let laserEnabled = false;
+
+        // Add after other game variables
+        let comboCount = 0;
+        let lastHitTime = 0;
+        const COMBO_THRESHOLD = 500;
+        let baseSpeed = 3;
+        let speedMultiplier = 1;
+
+        class Ball {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.dx = baseSpeed * speedMultiplier * (Math.random() > 0.5 ? 1 : -1);
+                this.dy = -baseSpeed * speedMultiplier;
+            }
+        }
 
         function initBricks() {
             bricks = [];
@@ -180,12 +208,10 @@
 
         function resetBallAndPaddle() {
             paddleX = (canvas.width - paddleWidth) / 2;
-            balls = [{
-                x: canvas.width / 2,
-                y: canvas.height - 30,
-                dx: 3 * (1 + (level - 1) * 0.3),
-                dy: -3 * (1 + (level - 1) * 0.3)
-            }];
+            balls = [new Ball(canvas.width / 2, canvas.height - 30)];
+            speedMultiplier = 1;
+            comboCount = 0;
+            lastHitTime = 0;
         }
 
         function nextLevel() {
@@ -257,7 +283,7 @@
                             
                             if (!brick.isUnbreakable) {
                                 brick.status = 0;
-                                score++;
+                                updateCombo();
                                 if (brick.special) handleSpecialEffect(brick.special);
                                 
                                 if ((score + countUnbreakableBricks()) === brickRowCount * brickColumnCount) {
@@ -276,20 +302,11 @@
                 case 'MULTI_BALL':
                     balls.forEach(ball => {
                         if (balls.length < 3) {
-                            balls.push({
-                                x: ball.x,
-                                y: ball.y,
-                                dx: -ball.dx,
-                                dy: -Math.abs(ball.dy)
-                            });
-                            balls.push({
-                                x: ball.x,
-                                y: ball.y,
-                                dx: ball.dx * 0.8,
-                                dy: -Math.abs(ball.dy)
-                            });
+                            balls.push(new Ball(ball.x, ball.y));
+                            balls.push(new Ball(ball.x, ball.y));
                         }
                     });
+                    updateBallSpeeds();
                     break;
                 case 'LASER':
                     laserEnabled = true;
@@ -298,6 +315,41 @@
                     }, 10000);
                     break;
             }
+        }
+
+        function updateCombo() {
+            const now = Date.now();
+            if (now - lastHitTime < COMBO_THRESHOLD) {
+                comboCount++;
+                const bonus = Math.min(comboCount * 5, 50);
+                score += bonus;
+                showComboEffect(bonus);
+            } else {
+                comboCount = 1;
+            }
+            lastHitTime = now;
+            
+            speedMultiplier = 1 + (balls.length * 0.15);
+            updateBallSpeeds();
+        }
+
+        function updateBallSpeeds() {
+            balls.forEach(ball => {
+                const signX = Math.sign(ball.dx);
+                const signY = Math.sign(ball.dy);
+                ball.dx = baseSpeed * speedMultiplier * signX;
+                ball.dy = baseSpeed * speedMultiplier * signY;
+            });
+        }
+
+        function showComboEffect(bonus) {
+            const comboDisplay = document.getElementById('comboDisplay');
+            comboDisplay.textContent = `${comboCount} COMBO! +${bonus}`;
+            comboDisplay.style.opacity = 1;
+            
+            setTimeout(() => {
+                comboDisplay.style.opacity = 0;
+            }, 1000);
         }
 
         function draw() {
