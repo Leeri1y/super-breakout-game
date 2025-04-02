@@ -1,7 +1,0 @@
-assets/
-│   ├── audio/              # 音频文件
-│   │   ├── background.mp3  # 背景音乐
-│   │   ├── hit.wav         # 碰撞音效
-│   │   ├── break.wav       # 砖块破碎音效
-│   │   ├── powerup.wav     # 道具获取音效
-│   │   └── gameover.wav    # 游戏结束音效
