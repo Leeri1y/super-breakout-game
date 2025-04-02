@@ -3,60 +3,486 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>超级打砖块</title>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
+    <title>增强版打砖块游戏</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            touch-action: none;
+            font-family: Arial, sans-serif;
+            background-color: #222;
+            color: white;
+        }
+        canvas {
+            display: block;
+            background: #000;
+            margin: 0 auto;
+        }
+        #gameMenu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 10;
+        }
+        #gameInstructions {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 10;
+            padding: 20px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+        #highScores {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 10;
+            padding: 20px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+        .menu-title {
+            font-size: 2.5rem;
+            margin-bottom: 30px;
+            color: #0095DD;
+        }
+        .menu-button {
+            padding: 12px 24px;
+            margin: 10px;
+            font-size: 1.2rem;
+            background-color: #0095DD;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            min-width: 150px;
+        }
+        .menu-button:hover {
+            background-color: #0077BB;
+        }
+        #livesDisplay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 1.2rem;
+            color: white;
+            z-index: 5;
+        }
+        #comboDisplay {
+            position: absolute;
+            top: 50px;
+            left: 20px;
+            font-size: 1.2rem;
+            color: #FFD700;
+            z-index: 5;
+        }
+        #skillDisplay {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            font-size: 1rem;
+            color: white;
+            z-index: 5;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+        #bossHealth {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 100px;
+            height: 10px;
+            background-color: #FF0000;
+            z-index: 5;
+            display: none;
+        }
+        #bossHealthBar {
+            height: 100%;
+            width: 100%;
+            background-color: #00FF00;
+        }
+        .highscore-item {
+            margin: 5px 0;
+            font-size: 1.2rem;
+        }
+        .daily-challenge {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: rgba(0, 150, 255, 0.2);
+            border-radius: 5px;
+        }
+    </style>
 </head>
 <body>
-    <div id="gameContainer">
-        <div id="livesDisplay"></div>
-        <div id="scoreDisplay"></div>
-        <div id="levelDisplay"></div>
-        <div id="comboDisplay"></div>
-        <canvas id="gameCanvas"></canvas>
-        
-        <div id="gameMenu" class="overlay">
-            <h1 class="menu-title">超级打砖块</h1>
-            <button id="startButton" class="menu-button">开始游戏</button>
-            <button id="instructionsButton" class="menu-button">游戏说明</button>
-            <button id="highscoresButton" class="menu-button">排行榜</button>
+    <div id="livesDisplay"></div>
+    <div id="comboDisplay"></div>
+    <div id="skillDisplay"></div>
+    <div id="bossHealth" style="display: none;">
+        <div id="bossHealthBar"></div>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="gameMenu">
+        <h1 class="menu-title">增强版打砖块</h1>
+        <button id="startButton" class="menu-button">开始游戏</button>
+        <button id="dailyChallengeButton" class="menu-button">每日挑战</button>
+        <button id="instructionsButton" class="menu-button">游戏说明</button>
+        <button id="highscoresButton" class="menu-button">高分榜</button>
+    </div>
+    
+    <div id="gameInstructions">
+        <h1 class="menu-title">游戏说明</h1>
+        <div style="max-width: 80%; margin-bottom: 30px;">
+            <p>1. 使用左右箭头键或触摸屏幕移动横板</p>
+            <p>2. 用横板反弹球击碎砖块</p>
+            <p>3. 红色砖块不可破坏，碰到会反弹</p>
+            <p>4. 特殊砖块有不同效果：</p>
+            <p style="color: #FFD700">金色：释放额外球</p>
+            <p style="color: #00FF00">绿色：横板变宽</p>
+            <p style="color: #FF00FF">紫色：获得激光能力</p>
+            <p style="color: #00FFFF">青色：球速减慢</p>
+            <p>5. 每关需要击碎所有可破坏砖块</p>
+            <p>6. 你有3条生命，球掉落底部会失去一条生命</p>
+            <p>7. 完成5关即可获胜</p>
+            <p>8. 连击可获得额外分数</p>
+            <p>9. 按S键减速，按M键释放多球(技能有冷却)</p>
         </div>
-        
-        <div id="gameInstructions" class="overlay">
-            <h1 class="menu-title">游戏说明</h1>
-            <div class="instructions-content">
-                <p>←→ 移动横板 | 空格键: 发射球</p>
-                <p>特殊砖块效果:</p>
-                <div class="powerup-example gold">多球</div>
-                <div class="powerup-example green">横板变宽</div>
-                <div class="powerup-example purple">激光</div>
-                <p>技能按键: S(减速) M(多球)</p>
-            </div>
-            <button id="backButton" class="menu-button">返回</button>
-        </div>
-        
-        <div id="highscoresScreen" class="overlay">
-            <h1 class="menu-title">排行榜</h1>
-            <div id="highscoresList"></div>
-            <button id="backFromHighscores" class="menu-button">返回</button>
-        </div>
-        
-        <div id="achievementPopup" class="achievement-popup">
-            <span class="achievement-icon">🏆</span>
-            <div class="achievement-text">
-                <div class="achievement-title"></div>
-                <div class="achievement-desc"></div>
-            </div>
-        </div>
+        <button id="backButton" class="menu-button">返回菜单</button>
     </div>
 
-    <!-- 音频元素 -->
-    <audio id="bgMusic" loop src="assets/audio/background.mp3"></audio>
-    <audio id="hitSound" src="assets/audio/hit.wav"></audio>
-    <audio id="breakSound" src="assets/audio/break.wav"></audio>
-    <audio id="powerupSound" src="assets/audio/powerup.wav"></audio>
-    <audio id="gameOverSound" src="assets/audio/gameover.wav"></audio>
+    <div id="highScores">
+        <h1 class="menu-title">高分榜</h1>
+        <div id="highscoresList" style="margin-bottom: 20px;"></div>
+        <button id="backFromScoresButton" class="menu-button">返回菜单</button>
+    </div>
 
-    <script src="js/game.js" type="module"></script>
-</body>
-</html>
+    <script>
+        // 游戏常量
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const gameMenu = document.getElementById('gameMenu');
+        const gameInstructions = document.getElementById('gameInstructions');
+        const highScores = document.getElementById('highScores');
+        const highscoresList = document.getElementById('highscoresList');
+        const startButton = document.getElementById('startButton');
+        const dailyChallengeButton = document.getElementById('dailyChallengeButton');
+        const instructionsButton = document.getElementById('instructionsButton');
+        const highscoresButton = document.getElementById('highscoresButton');
+        const backButton = document.getElementById('backButton');
+        const backFromScoresButton = document.getElementById('backFromScoresButton');
+        const livesDisplay = document.getElementById('livesDisplay');
+        const comboDisplay = document.getElementById('comboDisplay');
+        const skillDisplay = document.getElementById('skillDisplay');
+        const bossHealth = document.getElementById('bossHealth');
+        const bossHealthBar = document.getElementById('bossHealthBar');
+
+        // 特殊砖块类型
+        const SPECIAL_BRICKS = {
+            MULTI_BALL: { color: '#FFD700', effect: '释放2个额外球' },
+            EXPAND_PADDLE: { color: '#00FF00', effect: '横板变宽50%' },
+            LASER: { color: '#FF00FF', effect: '横板获得激光发射能力' },
+            SLOW_MO: { color: '#00FFFF', effect: '球速减半5秒' }
+        };
+
+        // 玩家技能
+        const PLAYER_SKILLS = {
+            TIME_SLOW: {
+                key: 'KeyS',
+                cooldown: 10000,
+                lastUsed: 0,
+                effect: () => { 
+                    gameSpeed = 0.5; 
+                    setTimeout(() => gameSpeed = 1, 2000); 
+                    showSkillMessage("时间减速激活！");
+                }
+            },
+            MULTI_BALL: {
+                key: 'KeyM',
+                cooldown: 15000,
+                lastUsed: 0,
+                effect: () => { 
+                    createNewBall(); 
+                    createNewBall();
+                    showSkillMessage("多球技能激活！");
+                }
+            }
+        };
+
+        // 设置适合手机的画布大小
+        const canvasWidth = Math.min(360, window.innerWidth);
+        const canvasHeight = Math.min(600, window.innerHeight);
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+
+        // 游戏变量
+        let paddleWidth = 100;
+        let paddleHeight = 15;
+        let paddleX = (canvas.width - paddleWidth) / 2;
+        let ballRadius = 6;
+        let balls = [{ x: canvas.width / 2, y: canvas.height - 30, dx: 3, dy: -3 }];
+        let rightPressed = false;
+        let leftPressed = false;
+        let bricks = [];
+        let brickRowCount = 5;
+        let brickColumnCount = 8;
+        let brickWidth = 40;
+        let brickHeight = 15;
+        let brickPadding = 8;
+        let brickOffsetTop = 60;
+        let brickOffsetLeft = 20;
+        let score = 0;
+        let level = 1;
+        let maxLevel = 5;
+        let lives = 3;
+        let gameRunning = false;
+        let gameSpeed = 1;
+        let comboCount = 0;
+        let lastHitTime = 0;
+        const COMBO_THRESHOLD = 500; // 毫秒
+        let boss = null;
+        let bossBullets = [];
+        let laserActive = false;
+        let lasers = [];
+        let expandedPaddle = false;
+        let expandedPaddleEndTime = 0;
+        let dailyChallenge = false;
+        let dailyChallengeModifiers = {};
+
+        // 初始化砖块
+        function initBricks() {
+            bricks = [];
+            // 动态计算砖块列数，确保不超过画布宽度
+            const maxBricksPerRow = Math.floor((canvas.width - brickOffsetLeft * 2 + brickPadding) / (brickWidth + brickPadding));
+            brickColumnCount = Math.min(brickColumnCount, maxBricksPerRow);
+            
+            // 动态调整砖块宽度和间距以完美适应画布
+            const totalSpace = canvas.width - brickOffsetLeft * 2;
+            const totalBrickWidth = brickColumnCount * brickWidth;
+            const totalPadding = (brickColumnCount - 1) * brickPadding;
+            const remainingSpace = totalSpace - (totalBrickWidth + totalPadding);
+            
+            if (remainingSpace > 0) {
+                // 如果有剩余空间，均匀分配到砖块间距
+                brickPadding += remainingSpace / (brickColumnCount - 1);
+            } else if (remainingSpace < 0) {
+                // 如果空间不足，调整砖块宽度
+                brickWidth = (totalSpace - (brickColumnCount - 1) * brickPadding) / brickColumnCount;
+            }
+            
+            for (let c = 0; c < brickColumnCount; c++) {
+                bricks[c] = [];
+                for (let r = 0; r < brickRowCount; r++) {
+                    const isUnbreakable = Math.random() < 0.2; // 20%概率生成不可破坏砖块
+                    const rand = Math.random();
+                    let special = null;
+                    
+                    if (!isUnbreakable && rand < 0.1) {
+                        // 10%概率生成特殊砖块
+                        const specialTypes = Object.keys(SPECIAL_BRICKS);
+                        special = specialTypes[Math.floor(Math.random() * specialTypes.length)];
+                    }
+                    
+                    bricks[c][r] = { 
+                        x: 0, 
+                        y: 0, 
+                        status: 1, 
+                        isUnbreakable,
+                        special 
+                    };
+                }
+            }
+        }
+
+        // 生成每日挑战关卡
+        function generateDailyChallenge() {
+            const today = new Date().toDateString();
+            // 简单哈希函数，根据日期生成种子
+            let seed = 0;
+            for (let i = 0; i < today.length; i++) {
+                seed = (seed << 5) - seed + today.charCodeAt(i);
+                seed = seed & seed; // 转换为32位整数
+            }
+            
+            // 根据种子生成固定布局
+            Math.seedrandom(seed);
+            
+            // 随机生成挑战模式修饰器
+            const modifiers = {
+                smallPaddle: Math.random() > 0.5,
+                fastBall: Math.random() > 0.5,
+                bonusMultiplier: 1.0 + Math.random() // 1.0-2.0倍分数
+            };
+            
+            // 重置随机数生成器
+            Math.seedrandom();
+            
+            return {
+                modifiers,
+                layout: generateLayoutFromSeed(seed)
+            };
+        }
+        
+        // 根据种子生成布局
+        function generateLayoutFromSeed(seed) {
+            // 这里可以实现更复杂的布局生成逻辑
+            // 简单起见，我们只是用种子来设置一些固定参数
+            const layout = {
+                brickRowCount: 5 + (seed % 3),
+                brickColumnCount: 8 + (seed % 3),
+                unbreakableRatio: 0.2 + (seed % 10) / 50,
+                specialRatio: 0.1 + (seed % 10) / 50
+            };
+            return layout;
+        }
+
+        // Boss类
+        class Boss {
+            constructor() {
+                this.width = 120;
+                this.height = 40;
+                this.x = canvas.width/2 - this.width/2;
+                this.y = 50;
+                this.health = 10;
+                this.maxHealth = 10;
+                this.moveSpeed = 3;
+                this.moveDir = 1;
+                this.color = '#FF4500';
+            }
+            
+            update() {
+                this.x += this.moveSpeed * this.moveDir;
+                if (this.x <= 0 || this.x + this.width >= canvas.width) {
+                    this.moveDir *= -1;
+                }
+                
+                // 随机发射子弹
+                if (Math.random() < 0.02) {
+                    bossBullets.push({
+                        x: this.x + this.width/2,
+                        y: this.y + this.height,
+                        speed: 5,
+                        radius: 4
+                    });
+                }
+            }
+            
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                
+                // 绘制Boss眼睛
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.arc(this.x + this.width/3, this.y + this.height/3, 5, 0, Math.PI*2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(this.x + this.width*2/3, this.y + this.height/3, 5, 0, Math.PI*2);
+                ctx.fill();
+                
+                // 绘制Boss嘴巴
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(this.x + this.width/2, this.y + this.height*2/3, 10, 0, Math.PI);
+                ctx.stroke();
+            }
+            
+            takeDamage() {
+                this.health--;
+                updateBossHealth();
+                if (this.health <= 0) {
+                    score += 500; // 击败Boss奖励
+                    boss = null;
+                    bossHealth.style.display = 'none';
+                    nextLevel();
+                }
+            }
+        }
+
+        // 更新Boss血条显示
+        function updateBossHealth() {
+            if (boss) {
+                const healthPercent = (boss.health / boss.maxHealth) * 100;
+                bossHealthBar.style.width = healthPercent + '%';
+            }
+        }
+
+        // 创建新球
+        function createNewBall() {
+            balls.push({
+                x: paddleX + paddleWidth/2,
+                y: canvas.height - paddleHeight - ballRadius,
+                dx: (Math.random() > 0.5 ? 1 : -1) * 3,
+                dy: -3
+            });
+        }
+
+        // 显示技能消息
+        function showSkillMessage(message) {
+            skillDisplay.textContent = message;
+            setTimeout(() => {
+                if (skillDisplay.textContent === message) {
+                    skillDisplay.textContent = '';
+                }
+            }, 2000);
+        }
+
+        // 使用技能
+        function useSkill(skillName) {
+            const skill = PLAYER_SKILLS[skillName];
+            const now = Date.now();
+            
+            if (now - skill.lastUsed < skill.cooldown) {
+                const remaining = Math.ceil((skill.cooldown - (now - skill.lastUsed)) / 1000);
+                showSkillMessage(`技能冷却中，还剩${remaining}秒`);
+                return;
+            }
+            
+            skill.effect();
+            skill.lastUsed = now;
+            
+            // 更新技能显示
+            updateSkillDisplay();
+        }
+
+        // 更新技能显示
+        function updateSkillDisplay() {
+            let displayText = '';
+            for (const skillName in PLAYER_SKILLS) {
+                const skill = PLAYER_SKILLS[skillName];
+                const now = Date.now();
+                const remaining = Math.max(0, skill.cooldown - (now - skill.lastUsed));
+                
+                if (remaining > 0) {
+                    displayText += `${skillName.replace('_', ' ')}: ${Math.ceil(remaining/1000)}s `;
+                } else {
+                    displayText += `${skillName.replace('_', ' ')}: 就绪 `;
+                }
+            }
+            
+            skillDisplay.textContent = displayText;
+        }
